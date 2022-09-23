@@ -13,16 +13,6 @@ type Register = z.infer<typeof register>;
 
 const { hostname, port, username, password } = Deno.env.toObject();
 const client = new SmtpClient();
-try {
-  await client.connectTLS({
-    hostname,
-    port: Number(port),
-    username,
-    password,
-  });
-} catch (e) {
-  console.log(e);
-}
 
 const supabaseClient = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -58,6 +48,13 @@ serve(
     if (error) return errorResponse(error.message);
 
     try {
+      await client.connectTLS({
+        hostname,
+        port: Number(port),
+        username,
+        password,
+      });
+
       await client.send({
         from: "delta@samorzad.p.lodz.pl",
         to: parsed.data.email,
