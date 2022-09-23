@@ -16,12 +16,16 @@ type Register = z.infer<typeof register>;
 
 const { hostname, port, username, password } = Deno.env.toObject();
 const client = new SmtpClient();
-await client.connectTLS({
-  hostname,
-  port: Number(port),
-  username,
-  password,
-});
+try {
+  await client.connect({
+    hostname,
+    port: Number(port),
+    username,
+    password,
+  });
+} catch (e) {
+  console.log(e);
+}
 
 const supabaseClient = createClient(
   Deno.env.get("SUPABASE_URL") ?? "",
@@ -41,27 +45,37 @@ const errorResponse = (error: string) =>
     status: 400,
   });
 
-serve(async (req) => {
-  const reqBody = await req.json();
-  const parsed = register.safeParse(reqBody);
+serve(
+  async (req) => {
+    if (req.method !== "POST") return errorResponse("Method not allowed");
 
-  if (!parsed.success) return errorResponse(parsed.error.message);
+    const reqBody = await req.json();
+    const parsed = register.safeParse(reqBody);
 
-  const { error } = await supabaseClient
-    .from<Register>("users")
-    .insert(parsed.data);
+    if (!parsed.success) return errorResponse(parsed.error.message);
 
-  if (error) return errorResponse(error.message);
+    const { error } = await supabaseClient
+      .from<Register>("users")
+      .insert(parsed.data);
 
-  await client.send({
-    from: "delta@samorzad.p.lodz.pl",
-    to: parsed.data.email,
-    subject: "Thank you for signing up",
-    content: "We sell the best roadrunner traps in the world!",
-  });
+    if (error) return errorResponse(error.message);
 
-  return successResponse;
-});
+    try {
+      await client.send({
+        from: "delta@samorzad.p.lodz.pl",
+        to: parsed.data.email,
+        subject: "Thank you for signing up",
+        content: "We sell the best roadrunner traps in the world!",
+      });
+    } catch (e) {
+      console.log(e);
+      return errorResponse("SMTP error");
+    }
+
+    return successResponse;
+  },
+  { port: 8000 }
+);
 
 // To invoke:
 // curl -i --location --request POST 'http://localhost:54321/functions/v1/register' \
