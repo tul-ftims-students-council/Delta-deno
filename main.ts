@@ -1,7 +1,4 @@
-import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
-import { z } from "https://deno.land/x/zod@v3.19.1/mod.ts";
-import { SmtpClient } from "https://deno.land/x/smtp@v0.7.0/mod.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@1.35.7";
+import { createClient, serve, SmtpClient, z } from "./deps.ts";
 
 const register = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
